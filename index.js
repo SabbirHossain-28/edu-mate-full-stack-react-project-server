@@ -9,9 +9,6 @@ const port=process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
 
-// DB_user:eduMateDB
-// DB_pass:HrgVyVA5htbicXZ2
-
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.7nkbk6a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
