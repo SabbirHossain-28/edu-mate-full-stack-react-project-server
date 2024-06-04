@@ -22,6 +22,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const userCollection=client.db("eduMateDB").collection("users")
     
     app.post("/jwt",async(req,res)=>{
         const userInfo=req.body;
@@ -29,6 +30,17 @@ async function run() {
             expiresIn:"6h",
         })
         res.send({token})
+    })
+
+    app.post("/users",async(req,res)=>{
+        const userData=req.body;
+        const query={email:userData.email};
+        const existingUser=await userCollection.findOne(query);
+        if(existingUser){
+            return
+        }
+        const result=await userCollection.insertOne(userData);
+        res.send(result);
     })
 
     // await client.db("admin").command({ ping: 1 });
