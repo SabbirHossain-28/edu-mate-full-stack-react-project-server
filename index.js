@@ -22,7 +22,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const userCollection=client.db("eduMateDB").collection("users")
+    const userCollection=client.db("eduMateDB").collection("users");
+    const applicationCollection=client.db("eduMateDB").collection("applications")
     
     app.post("/jwt",async(req,res)=>{
         const userInfo=req.body;
@@ -46,6 +47,24 @@ async function run() {
     app.get("/users",async(req,res)=>{
         const result=await userCollection.find().toArray();
         res.send(result);
+    })
+
+    app.get("/users/:email",async(req,res)=>{
+      const email=req.params.email;
+      const query={email:email};
+      const result=await userCollection.findOne(query);
+      if(result){
+        res.send(result);
+      }
+      else{
+        res.status(404).send({ message: "User not found" });
+      }
+    })
+
+    app.post("/applications",async(req,res)=>{
+      const applicationData=req.body;
+      const result=await applicationCollection.insertOne(applicationData);
+      res.send(result);
     })
 
     // await client.db("admin").command({ ping: 1 });
