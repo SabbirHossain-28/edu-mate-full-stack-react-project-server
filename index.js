@@ -1,7 +1,7 @@
 const express = require('express');
 const app=express();
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 require("dotenv").config();
 const port=process.env.PORT || 5000;
@@ -61,9 +61,26 @@ async function run() {
       }
     })
 
+    app.patch("/users/admin/:id",async(req,res)=>{
+      const id=req.params.id;
+      const filter={_id:new ObjectId(id)};
+      const updateUserRole={
+        $set:{
+          role:"Admin",
+        }
+      }
+      const result=await userCollection.updateOne(filter,updateUserRole);
+      res.send(result);
+    })
+
     app.post("/applications",async(req,res)=>{
       const applicationData=req.body;
       const result=await applicationCollection.insertOne(applicationData);
+      res.send(result);
+    })
+
+    app.get("/applications",async(req,res)=>{
+      const result=await applicationCollection.find().toArray();
       res.send(result);
     })
 
