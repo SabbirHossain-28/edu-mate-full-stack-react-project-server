@@ -84,6 +84,13 @@ async function run() {
       res.send(result);
     })
 
+    app.get("/applications/:email",async(req,res)=>{
+      const email=req.params.email;
+      const query={userEmail:email};
+      const result=await applicationCollection.find(query,{ projection: { status: 1, _id: 0 } }).toArray();
+      res.send(result);
+    })
+
     app.patch("/applications/approve/:id",async(req,res)=>{
       const id=req.params.id;
       const filter={_id: new ObjectId(id)};
