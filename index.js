@@ -84,6 +84,40 @@ async function run() {
       res.send(result);
     })
 
+    app.patch("/applications/approve/:id",async(req,res)=>{
+      const id=req.params.id;
+      const filter={_id: new ObjectId(id)};
+      const updateStatus={
+        $set:{
+          status:"Approved",
+        }
+      }
+      const result=await applicationCollection.updateOne(filter,updateStatus);
+      if(result.modifiedCount>0){
+        const application=await applicationCollection.findOne(filter);
+        const filteredUser={_id:ObjectId.createFromHexString(application.userId)};
+        const updateUserRole={
+          $set:{
+            role:"Teacher"
+          }
+        };
+        await userCollection.updateOne(filteredUser,updateUserRole)
+      }
+      res.send(result)
+    })
+
+    app.patch("/applications/reject/:id",async(req,res)=>{
+      const id=req.params.id;
+      const filter={_id:new ObjectId(id)};
+      const updateStatus={
+        $set:{
+          status:"Rejected",
+        }
+      };
+      const result=await applicationCollection.updateOne(filter,updateStatus);
+      res.send(result);
+    })
+
     // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
