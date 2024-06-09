@@ -23,7 +23,8 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const userCollection=client.db("eduMateDB").collection("users");
-    const applicationCollection=client.db("eduMateDB").collection("applications")
+    const applicationCollection=client.db("eduMateDB").collection("applications");
+    const classCollection=client.db("eduMateDB").collection("classes");
     
     app.post("/jwt",async(req,res)=>{
         const userInfo=req.body;
@@ -122,6 +123,12 @@ async function run() {
         }
       };
       const result=await applicationCollection.updateOne(filter,updateStatus);
+      res.send(result);
+    })
+
+    app.post("/classes",async(req,res)=>{
+      const classData=req.body;
+      const result=await classCollection.insertOne(classData);
       res.send(result);
     })
 
