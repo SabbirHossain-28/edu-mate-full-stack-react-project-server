@@ -152,7 +152,7 @@ async function run() {
 
     app.get("/classes/:email", async (req, res) => {
       const email = req.params.email;
-      console.log(email);
+      console.log(email); 
       const query = { teacherEmail: email };
       const result = await classCollection.find(query).toArray();
       res.send(result);
@@ -163,6 +163,17 @@ async function run() {
       const query = { _id: ObjectId.createFromHexString(id) };
       const result = await classCollection.findOne(query);
       res.send(result);
+    });
+
+    app.get("/allclasses/accepted", async (req, res) => {
+      try {
+        const query = { status: "Accepted" };
+        const result = await classCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching accepted classes:", error);
+        res.status(500).send({message:"Inter server error"})
+      }
     });
 
     app.delete("/classes/:id", async (req, res) => {
