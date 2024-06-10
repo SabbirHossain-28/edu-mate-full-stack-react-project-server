@@ -26,6 +26,9 @@ async function run() {
       .db("eduMateDB")
       .collection("applications");
     const classCollection = client.db("eduMateDB").collection("classes");
+    const assignmentCollection = client
+      .db("eduMateDB")
+      .collection("assignments");
 
     app.post("/jwt", async (req, res) => {
       const userInfo = req.body;
@@ -149,8 +152,16 @@ async function run() {
 
     app.get("/classes/:email", async (req, res) => {
       const email = req.params.email;
+      console.log(email);
       const query = { teacherEmail: email };
       const result = await classCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/class/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId.createFromHexString(id) };
+      const result = await classCollection.findOne(query);
       res.send(result);
     });
 
@@ -175,17 +186,55 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/classes/approve/:id",async(req,res)=>{
-      const id=req.params.id;
-      const filter={_id:new ObjectId(id)};
-      const updateStatus={
-        $set:{
-          status:"Acceopted"
-        }
+    app.patch("/classes/approve/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateStatus = {
+        $set: {
+          status: "Accepted",
+        },
       };
-      const result=await classCollection.updateOne(filter,updateStatus);
+      const result = await classCollection.updateOne(filter, updateStatus);
       res.send(result);
-    })
+    });
+
+    app.patch("/classes/reject/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateStatus = {
+        $set: {
+          status: "Rejected",
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateStatus);
+      res.send(result);
+    });
+
+    app.post("/assignments", async (req, res) => {
+      const assignmentData = req.body;
+      const classId = assignmentData.classId;
+      try {
+        const result = await assignmentCollection.insertOne(assignmentData);
+        if (result.insertedId) {
+          const filter = { _id: ObjectId.createFromHexString(classId) };
+          const updateAssignmentCount = { $inc: { assignment: 1 } };
+          await classCollection.updateOne(filter, updateAssignmentCount);
+          res.send(result);
+        } else {
+          res
+            .status(500)
+            .send({ message: "Failed to increase assignment count" });
+        }
+      } catch (error) {
+        console.error("Error creating assignment:", error);
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+    app.get("/assignments", async (req, res) => {
+      const result = await assignmentCollection.find().toArray();
+      res.send(result);
+    });
 
     // await client.db("admin").command({ ping: 1 });
     console.log(
