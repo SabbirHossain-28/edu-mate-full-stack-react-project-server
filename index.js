@@ -5,23 +5,26 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY_SERVER);
 
 app.use(express.json());
 app.use(cors());
 
-const verifyToken=(req,res,next)=>{
-  if(!req.headers.authorization){
-    return res.status(401).send({message:"Sorry,Unauthorized Access"})
+const verifyToken = (req, res, next) => {
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "Sorry,Unauthorized Access" });
   }
-  const token= req.headers.authorization.split(" ")[1];
-  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
-    if(err){
-      return res.status(401).send({message:"Again Sorry! Unauthorized Access"});
+  const token = req.headers.authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ message: "Again Sorry! Unauthorized Access" });
     }
-    req.decoded=decoded;
+    req.decoded = decoded;
     next();
-  })
-}
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.7nkbk6a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -43,6 +46,9 @@ async function run() {
     const assignmentCollection = client
       .db("eduMateDB")
       .collection("assignments");
+    const enrolledClassCollection = client
+      .db("eduMateDB")
+      .collection("enrolledClass");
 
     app.post("/jwt", async (req, res) => {
       const userInfo = req.body;
@@ -58,7 +64,9 @@ async function run() {
       const user = await userCollection.findOne(query);
       const isAdmin = user?.role === "Admin";
       if (!isAdmin) {
-        return res.status(403).send({ message: "Forbidden Access,This api is only for the Admin" });
+        return res
+          .status(403)
+          .send({ message: "Forbidden Access,This api is only for the Admin" });
       }
       next();
     };
@@ -69,7 +77,9 @@ async function run() {
       const user = await userCollection.findOne(query);
       const isTeacher = user?.role === "Teacher";
       if (!isTeacher) {
-        return res.status(403).send({ message: "Forbidden Access,This api is only for the Teacher" });
+        return res.status(403).send({
+          message: "Forbidden Access,This api is only for the Teacher",
+        });
       }
       next();
     };
@@ -85,12 +95,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/users/:email",verifyToken, async (req, res) => {
+    app.get("/users/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await userCollection.findOne(query);
@@ -101,45 +111,67 @@ async function run() {
       }
     });
 
-    app.patch("/users/admin/:id",verifyToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateUserRole = {
-        $set: {
-          role: "Admin",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updateUserRole);
-      res.send(result);
-    });
-
-    app.get("/users/admin/:email",verifyToken,async(req,res)=>{
-      const email=req.params.email;
-      if(email !== req.decoded.email){
-        return res.status(403).send({message:"Forbidden Access"})
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateUserRole = {
+          $set: {
+            role: "Admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updateUserRole);
+        res.send(result);
       }
-      const query={email:email};
-      const user=await userCollection.findOne(query);
-      let Admin=false;
-      if(user){
-        Admin=user?.role==="Admin";
+    );
+
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let Admin = false;
+      if (user) {
+        Admin = user?.role === "Admin";
       }
       console.log(Admin);
-      res.send({Admin});
-    })
+      res.send({ Admin });
+    });
 
-    app.post("/applications",verifyToken, async (req, res) => {
+    // app.get("/user/teacher/:email",verifyToken,async(req,res)=>{
+    //   const email=req.params.email;
+    //   console.log(email);
+    //   if(email !== req.decoded.email){
+    //     return res.status(403).send({message:"Forbidden Access"});
+    //   }
+    //   const query={email:email};
+    //   const user=await userCollection.findOne(query);
+    //   console.log(user);
+    //   let Teacher=false;
+    //   if(user){
+    //     Teacher=user?.role==="Teacher";
+    //   }
+    //   console.log(Teacher);
+    //   res.send({Teacher})
+    // })
+
+    app.post("/applications", verifyToken, async (req, res) => {
       const applicationData = req.body;
       const result = await applicationCollection.insertOne(applicationData);
       res.send(result);
     });
 
-    app.get("/applications",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/applications", verifyToken, verifyAdmin, async (req, res) => {
       const result = await applicationCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/applications/:email",verifyToken, async (req, res) => {
+    app.get("/applications/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { userEmail: email };
       const result = await applicationCollection
@@ -148,68 +180,78 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/applications/approve/:id",verifyToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateStatus = {
-        $set: {
-          status: "Approved",
-        },
-      };
-      const result = await applicationCollection.updateOne(
-        filter,
-        updateStatus
-      );
-      if (result.modifiedCount > 0) {
-        const application = await applicationCollection.findOne(filter);
-        const filteredUser = {
-          _id: ObjectId.createFromHexString(application.userId),
-        };
-        const updateUserRole = {
+    app.patch(
+      "/applications/approve/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateStatus = {
           $set: {
-            role: "Teacher",
+            status: "Approved",
           },
         };
-        await userCollection.updateOne(filteredUser, updateUserRole);
+        const result = await applicationCollection.updateOne(
+          filter,
+          updateStatus
+        );
+        if (result.modifiedCount > 0) {
+          const application = await applicationCollection.findOne(filter);
+          const filteredUser = {
+            _id: ObjectId.createFromHexString(application.userId),
+          };
+          const updateUserRole = {
+            $set: {
+              role: "Teacher",
+            },
+          };
+          await userCollection.updateOne(filteredUser, updateUserRole);
+        }
+        res.send(result);
       }
-      res.send(result);
-    });
+    );
 
-    app.patch("/applications/reject/:id",verifyToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateStatus = {
-        $set: {
-          status: "Rejected",
-        },
-      };
-      const result = await applicationCollection.updateOne(
-        filter,
-        updateStatus
-      );
-      res.send(result);
-    });
+    app.patch(
+      "/applications/reject/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateStatus = {
+          $set: {
+            status: "Rejected",
+          },
+        };
+        const result = await applicationCollection.updateOne(
+          filter,
+          updateStatus
+        );
+        res.send(result);
+      }
+    );
 
-    app.post("/classes",verifyToken,verifyTeacher, async (req, res) => {
+    app.post("/classes", verifyToken, verifyTeacher, async (req, res) => {
       const classData = req.body;
       const result = await classCollection.insertOne(classData);
       res.send(result);
     });
 
-    app.get("/classes",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/classes", verifyToken, verifyAdmin, async (req, res) => {
       const result = await classCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/classes/:email",verifyToken,verifyTeacher, async (req, res) => {
+    app.get("/classes/:email", verifyToken, verifyTeacher, async (req, res) => {
       const email = req.params.email;
-      console.log(email); 
+      console.log(email);
       const query = { teacherEmail: email };
       const result = await classCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/class/:id",verifyToken, async (req, res) => {
+    app.get("/class/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId.createFromHexString(id) };
       const result = await classCollection.findOne(query);
@@ -223,18 +265,18 @@ async function run() {
         res.send(result);
       } catch (error) {
         console.error("Error fetching accepted classes:", error);
-        res.status(500).send({message:"Inter server error"})
+        res.status(500).send({ message: "Inter server error" });
       }
     });
 
-    app.delete("/classes/:id",verifyToken,verifyTeacher, async (req, res) => {
+    app.delete("/classes/:id", verifyToken, verifyTeacher, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await classCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.patch("/classes/:id",verifyToken,verifyTeacher, async (req, res) => {
+    app.patch("/classes/:id", verifyToken, verifyTeacher, async (req, res) => {
       const id = req.params.id;
       const updateData = req.body;
       console.log("helllllo", updateData);
@@ -248,31 +290,54 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/classes/approve/:id",verifyToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateStatus = {
-        $set: {
-          status: "Accepted",
-        },
-      };
-      const result = await classCollection.updateOne(filter, updateStatus);
-      res.send(result);
+    app.patch(
+      "/classes/approve/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateStatus = {
+          $set: {
+            status: "Accepted",
+          },
+        };
+        const result = await classCollection.updateOne(filter, updateStatus);
+        res.send(result);
+      }
+    );
+
+    app.patch(
+      "/classes/reject/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateStatus = {
+          $set: {
+            status: "Rejected",
+          },
+        };
+        const result = await classCollection.updateOne(filter, updateStatus);
+        res.send(result);
+      }
+    );
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
     });
 
-    app.patch("/classes/reject/:id",verifyToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateStatus = {
-        $set: {
-          status: "Rejected",
-        },
-      };
-      const result = await classCollection.updateOne(filter, updateStatus);
-      res.send(result);
-    });
-
-    app.post("/assignments",verifyToken,verifyTeacher, async (req, res) => {
+    app.post("/assignments", verifyToken, verifyTeacher, async (req, res) => {
       const assignmentData = req.body;
       const classId = assignmentData.classId;
       try {
