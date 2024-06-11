@@ -63,6 +63,17 @@ async function run() {
       next();
     };
 
+    const verifyTeacher = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isTeacher = user?.role === "Teacher";
+      if (!isTeacher) {
+        return res.status(403).send({ message: "Forbidden Access,This api is only for the Teacher" });
+      }
+      next();
+    };
+
     app.post("/users", async (req, res) => {
       const userData = req.body;
       const query = { email: userData.email };
@@ -164,7 +175,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/classes",verifyToken, async (req, res) => {
+    app.post("/classes",verifyToken,verifyTeacher, async (req, res) => {
       const classData = req.body;
       const result = await classCollection.insertOne(classData);
       res.send(result);
@@ -175,7 +186,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/classes/:email",verifyToken, async (req, res) => {
+    app.get("/classes/:email",verifyToken,verifyTeacher, async (req, res) => {
       const email = req.params.email;
       console.log(email); 
       const query = { teacherEmail: email };
@@ -201,14 +212,14 @@ async function run() {
       }
     });
 
-    app.delete("/classes/:id",verifyToken, async (req, res) => {
+    app.delete("/classes/:id",verifyToken,verifyTeacher, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await classCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.patch("/classes/:id",verifyToken, async (req, res) => {
+    app.patch("/classes/:id",verifyToken,verifyTeacher, async (req, res) => {
       const id = req.params.id;
       const updateData = req.body;
       console.log("helllllo", updateData);
@@ -246,7 +257,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/assignments",verifyToken, async (req, res) => {
+    app.post("/assignments",verifyToken,verifyTeacher, async (req, res) => {
       const assignmentData = req.body;
       const classId = assignmentData.classId;
       try {
