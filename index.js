@@ -337,6 +337,32 @@ async function run() {
       });
     });
 
+    app.post("/enrolledClass", verifyToken, async (req, res) => {
+      const enrolledClassData = req.body;
+      const classId = enrolledClassData.classId;
+      try {
+        const result = await enrolledClassCollection.insertOne(
+          enrolledClassData
+        );
+        if (result.insertedId) {
+          const filter = { _id: ObjectId.createFromHexString(classId) };
+          const updateEnrollCount = { $inc: { totalEnrollment: 1 } };
+          await classCollection.updateOne(filter, updateEnrollCount);
+          res.send(result);
+        } else {
+          res.status(500).send({ message: "Faild to increase enrollment" });
+        }
+      } catch (error) {
+        console.error("Error creating assignment:", error);
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+   app.get("/enrolledClass",async(req,res)=>{
+    const result=await enrolledClassCollection.find().toArray();
+    res.send(result);
+   })
+
     app.post("/assignments", verifyToken, verifyTeacher, async (req, res) => {
       const assignmentData = req.body;
       const classId = assignmentData.classId;
