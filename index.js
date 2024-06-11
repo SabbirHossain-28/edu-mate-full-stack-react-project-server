@@ -9,6 +9,20 @@ const port = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
 
+const verifyToken=(req,res,next)=>{
+  if(!req.headers.authorization){
+    return res.status(401).send({message:"Sorry,Unauthorized Access"})
+  }
+  const token= req.headers.authorization.split(" ")[1];
+  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+    if(err){
+      return res.status(401).send({message:"Again Sorry! Unauthorized Access"});
+    }
+    req.decoded=decoded;
+    next();
+  })
+}
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.7nkbk6a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
@@ -49,12 +63,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users",verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/users/:email", async (req, res) => {
+    app.get("/users/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await userCollection.findOne(query);
@@ -65,7 +79,7 @@ async function run() {
       }
     });
 
-    app.patch("/users/admin/:id", async (req, res) => {
+    app.patch("/users/admin/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateUserRole = {
@@ -77,18 +91,18 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/applications", async (req, res) => {
+    app.post("/applications",verifyToken, async (req, res) => {
       const applicationData = req.body;
       const result = await applicationCollection.insertOne(applicationData);
       res.send(result);
     });
 
-    app.get("/applications", async (req, res) => {
+    app.get("/applications",verifyToken, async (req, res) => {
       const result = await applicationCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/applications/:email", async (req, res) => {
+    app.get("/applications/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { userEmail: email };
       const result = await applicationCollection
@@ -97,7 +111,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/applications/approve/:id", async (req, res) => {
+    app.patch("/applications/approve/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
@@ -124,7 +138,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/applications/reject/:id", async (req, res) => {
+    app.patch("/applications/reject/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
@@ -139,18 +153,18 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/classes", async (req, res) => {
+    app.post("/classes",verifyToken, async (req, res) => {
       const classData = req.body;
       const result = await classCollection.insertOne(classData);
       res.send(result);
     });
 
-    app.get("/classes", async (req, res) => {
+    app.get("/classes",verifyToken, async (req, res) => {
       const result = await classCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/classes/:email", async (req, res) => {
+    app.get("/classes/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
       console.log(email); 
       const query = { teacherEmail: email };
@@ -158,7 +172,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/class/:id", async (req, res) => {
+    app.get("/class/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId.createFromHexString(id) };
       const result = await classCollection.findOne(query);
@@ -176,14 +190,14 @@ async function run() {
       }
     });
 
-    app.delete("/classes/:id", async (req, res) => {
+    app.delete("/classes/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await classCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.patch("/classes/:id", async (req, res) => {
+    app.patch("/classes/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const updateData = req.body;
       console.log("helllllo", updateData);
@@ -197,7 +211,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/classes/approve/:id", async (req, res) => {
+    app.patch("/classes/approve/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
@@ -209,7 +223,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/classes/reject/:id", async (req, res) => {
+    app.patch("/classes/reject/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
@@ -221,7 +235,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/assignments", async (req, res) => {
+    app.post("/assignments",verifyToken, async (req, res) => {
       const assignmentData = req.body;
       const classId = assignmentData.classId;
       try {
