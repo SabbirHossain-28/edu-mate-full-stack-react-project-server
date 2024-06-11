@@ -52,6 +52,17 @@ async function run() {
       res.send({ token });
     });
 
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "Admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "Forbidden Access,This api is only for the Admin" });
+      }
+      next();
+    };
+
     app.post("/users", async (req, res) => {
       const userData = req.body;
       const query = { email: userData.email };
@@ -63,7 +74,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users",verifyToken, async (req, res) => {
+    app.get("/users",verifyToken,verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -79,7 +90,7 @@ async function run() {
       }
     });
 
-    app.patch("/users/admin/:id",verifyToken, async (req, res) => {
+    app.patch("/users/admin/:id",verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateUserRole = {
@@ -97,7 +108,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/applications",verifyToken, async (req, res) => {
+    app.get("/applications",verifyToken,verifyAdmin, async (req, res) => {
       const result = await applicationCollection.find().toArray();
       res.send(result);
     });
@@ -111,7 +122,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/applications/approve/:id",verifyToken, async (req, res) => {
+    app.patch("/applications/approve/:id",verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
@@ -138,7 +149,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/applications/reject/:id",verifyToken, async (req, res) => {
+    app.patch("/applications/reject/:id",verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
@@ -159,7 +170,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/classes",verifyToken, async (req, res) => {
+    app.get("/classes",verifyToken,verifyAdmin, async (req, res) => {
       const result = await classCollection.find().toArray();
       res.send(result);
     });
@@ -211,7 +222,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/classes/approve/:id",verifyToken, async (req, res) => {
+    app.patch("/classes/approve/:id",verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
@@ -223,7 +234,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/classes/reject/:id",verifyToken, async (req, res) => {
+    app.patch("/classes/reject/:id",verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateStatus = {
