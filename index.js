@@ -113,6 +113,21 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/users/admin/:email",verifyToken,async(req,res)=>{
+      const email=req.params.email;
+      if(email !== req.decoded.email){
+        return res.status(403).send({message:"Forbidden Access"})
+      }
+      const query={email:email};
+      const user=await userCollection.findOne(query);
+      let Admin=false;
+      if(user){
+        Admin=user?.role==="Admin";
+      }
+      console.log(Admin);
+      res.send({Admin});
+    })
+
     app.post("/applications",verifyToken, async (req, res) => {
       const applicationData = req.body;
       const result = await applicationCollection.insertOne(applicationData);
