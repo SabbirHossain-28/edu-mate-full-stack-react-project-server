@@ -49,6 +49,10 @@ async function run() {
     const enrolledClassCollection = client
       .db("eduMateDB")
       .collection("enrolledClass");
+    const submittedAssignmentCollection = client
+      .db("eduMateDB")
+      .collection("submittedAssignments");
+    const feedbackCollection = client.db("eduMateDB").collection("feedbacks");
 
     app.post("/jwt", async (req, res) => {
       const userInfo = req.body;
@@ -96,8 +100,30 @@ async function run() {
     });
 
     app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await userCollection.find().toArray();
+      const size=parseInt(req.query.size);
+      const page=parseInt(req.query.page)-1;
+      const  search=req.query.search;
+      let query = {
+        $or: [
+          { name: { $regex: new RegExp(search, "i") } },
+          { email: { $regex: new RegExp(search, "i") } },
+        ],
+      };
+      const result = await userCollection.find(query).skip(page*size).limit(size).toArray();
       res.send(result);
+    });
+
+    app.get("/countedUsers", async (req, res) => {
+      const search = req.query.search;
+      let query = {
+        $or: [
+          { name: { $regex: new RegExp(search, "i") } },
+          { email: { $regex: new RegExp(search, "i") } },
+        ],
+      };
+      console.log(query);
+      const result = await userCollection.countDocuments(query);
+      res.send({ result });
     });
 
     app.get("/users/:email", verifyToken, async (req, res) => {
@@ -363,12 +389,21 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/enrolledClass/:email",async(req,res)=>{
-      const email=req.params.email;
-      const query={studentEmail:email};
-      const result=await enrolledClassCollection.find(query).toArray();
+    app.get("/enrolledClass/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { studentEmail: email };
+      const result = await enrolledClassCollection.find(query).toArray();
       res.send(result);
-    })
+    });
+
+    app.get("/enrolledClassAssignment/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await enrolledClassCollection.findOne(query, {
+        projection: { classId: 1, classTitle: 1, _id: 0 },
+      });
+      res.send(result);
+    });
 
     app.post("/assignments", verifyToken, verifyTeacher, async (req, res) => {
       const assignmentData = req.body;
@@ -396,6 +431,69 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/assignments/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = { classId: id };
+      const result = await assignmentCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/submittedAssignment", async (req, res) => {
+      const submittedAssignmentData = req.body;
+      const classId = submittedAssignmentData.classId;
+      try {
+        const result = await submittedAssignmentCollection.insertOne(
+          submittedAssignmentData
+        );
+        if (result.insertedId) {
+          const filter = { _id: ObjectId.createFromHexString(classId) };
+          const updateAssignmentSubmissionCount = {
+            $inc: { totalAssignmentSubmission: 1 },
+          };
+          await classCollection.updateOne(
+            filter,
+            updateAssignmentSubmissionCount
+          );
+          res.send(result);
+        } else {
+          res
+            .status(500)
+            .send({
+              message: "Failed to increase total assignment submission count",
+            });
+        }
+      } catch (error) {
+        console.error("Error submitting assignment:", error);
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+    app.get("/submittedAssignment/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { studentEmail: email };
+      const result = await submittedAssignmentCollection
+        .find(query, { projection: { assignmentId: 1, _id: 0 } })
+        .toArray();
+      res.send(result);
+    });
+
+    app.post("/feedbacks", async (req, res) => {
+      const feedbacksData = req.body;
+      const result = await feedbackCollection.insertOne(feedbacksData);
+      res.send(result);
+    });
+
+    app.get("/allFeedbacks",async(req,res)=>{
+      const result=await feedbackCollection.find().toArray();
+      res.send(result);
+    })
+    app.get("/feedbacks/:id", async (req, res) => {
+      const classId = req.params.id;
+      const query = { classId: classId };
+      const result = await feedbackCollection.find(query).toArray();
+      res.send(result);
+    });
     // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
