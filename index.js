@@ -358,10 +358,17 @@ async function run() {
       }
     });
 
-   app.get("/enrolledClass",async(req,res)=>{
-    const result=await enrolledClassCollection.find().toArray();
-    res.send(result);
-   })
+    app.get("/enrolledClass", async (req, res) => {
+      const result = await enrolledClassCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/enrolledClass/:email",async(req,res)=>{
+      const email=req.params.email;
+      const query={studentEmail:email};
+      const result=await enrolledClassCollection.find(query).toArray();
+      res.send(result);
+    })
 
     app.post("/assignments", verifyToken, verifyTeacher, async (req, res) => {
       const assignmentData = req.body;
