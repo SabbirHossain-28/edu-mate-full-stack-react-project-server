@@ -350,6 +350,21 @@ async function run() {
       }
     );
 
+    app.get("/all-classes/max-enrollment",async(req,res)=>{
+      try {
+        const result=await classCollection.find().sort({totalEnrollment:-1}).limit(6).toArray();
+        if(result.length>0){
+          res.send(result);
+        }
+        else{
+          res.status(404).send({message:"No classes found"})
+        }
+      } catch (error) {
+        console.error("Error fetching class with maximum enrollment:", error);
+    res.status(500).send({ message: "Internal server error" });
+      }
+    })
+
     app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
@@ -494,6 +509,34 @@ async function run() {
       const result = await feedbackCollection.find(query).toArray();
       res.send(result);
     });
+
+    app.get("/stats",async(req,res)=>{
+      try {
+        const totalUsersPipeline=[
+          {$group:{_id:null,count:{$sum:1}}}
+        ];
+        const totalClassesPipeline=[
+          {$match:{status:"Accepted"}},
+          {$group:{_id:null,count:{$sum:1}}}
+        ];
+        const totalEnrollmentsPipeline=[
+          {$group:{_id:null,count:{$sum:1}}}
+        ];
+        const [totalUsers,totalClasses,totalEnrollments]=await Promise.all([
+          userCollection.aggregate(totalUsersPipeline).toArray(),
+          classCollection.aggregate(totalClassesPipeline).toArray(),
+          enrolledClassCollection.aggregate(totalEnrollmentsPipeline).toArray()
+        ]);
+        res.send({
+          totalUsers:totalUsers[0]?.count || 0,
+          totalClasses:totalClasses[0]?.count || 0,
+          totalEnrollments:totalEnrollments[0]?.count || 0
+        })
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({message:"Failed to fetch"})
+      }
+    })
     // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
