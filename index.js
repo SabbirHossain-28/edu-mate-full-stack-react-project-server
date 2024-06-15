@@ -21,6 +21,7 @@ const verifyToken = (req, res, next) => {
         .status(401)
         .send({ message: "Again Sorry! Unauthorized Access" });
     }
+    console.log(decoded);
     req.decoded = decoded;
     next();
   });
@@ -100,20 +101,8 @@ async function run() {
     });
 
     app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
-      const size=parseInt(req.query.size);
-      const page=parseInt(req.query.page)-1;
-      const  search=req.query.search;
-      let query = {
-        $or: [
-          { name: { $regex: new RegExp(search, "i") } },
-          { email: { $regex: new RegExp(search, "i") } },
-        ],
-      };
-      const result = await userCollection.find(query).skip(page*size).limit(size).toArray();
-      res.send(result);
-    });
-
-    app.get("/countedUsers", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
       const search = req.query.search;
       let query = {
         $or: [
@@ -121,7 +110,23 @@ async function run() {
           { email: { $regex: new RegExp(search, "i") } },
         ],
       };
-      console.log(query);
+      const result = await userCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/countedUsers",verifyToken,verifyAdmin, async (req, res) => {
+      const search = req.query.search;
+      let query = {
+        $or: [
+          { name: { $regex: new RegExp(search, "i") } },
+          { email: { $regex: new RegExp(search, "i") } },
+        ],
+      };
+      // console.log(query);
       const result = await userCollection.countDocuments(query);
       res.send({ result });
     });
@@ -193,7 +198,9 @@ async function run() {
     });
 
     app.get("/applications", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await applicationCollection.find().toArray();
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
+      const result = await applicationCollection.find().skip(page * size).limit(size).toArray();
       res.send(result);
     });
 
@@ -257,6 +264,11 @@ async function run() {
         res.send(result);
       }
     );
+
+    app.get("/countedApplications",verifyToken,verifyAdmin,async(req,res)=>{
+      const result=await applicationCollection.countDocuments();
+      res.send({result})
+    })
 
     app.post("/classes", verifyToken, verifyTeacher, async (req, res) => {
       const classData = req.body;
@@ -350,20 +362,23 @@ async function run() {
       }
     );
 
-    app.get("/all-classes/max-enrollment",async(req,res)=>{
+    app.get("/all-classes/max-enrollment", async (req, res) => {
       try {
-        const result=await classCollection.find().sort({totalEnrollment:-1}).limit(6).toArray();
-        if(result.length>0){
+        const result = await classCollection
+          .find()
+          .sort({ totalEnrollment: -1 })
+          .limit(6)
+          .toArray();
+        if (result.length > 0) {
           res.send(result);
-        }
-        else{
-          res.status(404).send({message:"No classes found"})
+        } else {
+          res.status(404).send({ message: "No classes found" });
         }
       } catch (error) {
         console.error("Error fetching class with maximum enrollment:", error);
-    res.status(500).send({ message: "Internal server error" });
+        res.status(500).send({ message: "Internal server error" });
       }
-    })
+    });
 
     app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
@@ -399,7 +414,7 @@ async function run() {
       }
     });
 
-    app.get("/enrolledClass", async (req, res) => {
+    app.get("/enrolledClass",verifyToken, async (req, res) => {
       const result = await enrolledClassCollection.find().toArray();
       res.send(result);
     });
@@ -472,11 +487,9 @@ async function run() {
           );
           res.send(result);
         } else {
-          res
-            .status(500)
-            .send({
-              message: "Failed to increase total assignment submission count",
-            });
+          res.status(500).send({
+            message: "Failed to increase total assignment submission count",
+          });
         }
       } catch (error) {
         console.error("Error submitting assignment:", error);
@@ -499,10 +512,10 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/allFeedbacks",async(req,res)=>{
-      const result=await feedbackCollection.find().toArray();
+    app.get("/allFeedbacks", async (req, res) => {
+      const result = await feedbackCollection.find().toArray();
       res.send(result);
-    })
+    });
     app.get("/feedbacks/:id", async (req, res) => {
       const classId = req.params.id;
       const query = { classId: classId };
@@ -510,33 +523,33 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/stats",async(req,res)=>{
+    app.get("/stats", async (req, res) => {
       try {
-        const totalUsersPipeline=[
-          {$group:{_id:null,count:{$sum:1}}}
+        const totalUsersPipeline = [
+          { $group: { _id: null, count: { $sum: 1 } } },
         ];
-        const totalClassesPipeline=[
-          {$match:{status:"Accepted"}},
-          {$group:{_id:null,count:{$sum:1}}}
+        const totalClassesPipeline = [
+          { $match: { status: "Accepted" } },
+          { $group: { _id: null, count: { $sum: 1 } } },
         ];
-        const totalEnrollmentsPipeline=[
-          {$group:{_id:null,count:{$sum:1}}}
+        const totalEnrollmentsPipeline = [
+          { $group: { _id: null, count: { $sum: 1 } } },
         ];
-        const [totalUsers,totalClasses,totalEnrollments]=await Promise.all([
+        const [totalUsers, totalClasses, totalEnrollments] = await Promise.all([
           userCollection.aggregate(totalUsersPipeline).toArray(),
           classCollection.aggregate(totalClassesPipeline).toArray(),
-          enrolledClassCollection.aggregate(totalEnrollmentsPipeline).toArray()
+          enrolledClassCollection.aggregate(totalEnrollmentsPipeline).toArray(),
         ]);
         res.send({
-          totalUsers:totalUsers[0]?.count || 0,
-          totalClasses:totalClasses[0]?.count || 0,
-          totalEnrollments:totalEnrollments[0]?.count || 0
-        })
+          totalUsers: totalUsers[0]?.count || 0,
+          totalClasses: totalClasses[0]?.count || 0,
+          totalEnrollments: totalEnrollments[0]?.count || 0,
+        });
       } catch (error) {
         console.error(error);
-        res.status(500).send({message:"Failed to fetch"})
+        res.status(500).send({ message: "Failed to fetch" });
       }
-    })
+    });
     // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
