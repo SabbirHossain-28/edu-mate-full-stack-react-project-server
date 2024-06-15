@@ -277,9 +277,16 @@ async function run() {
     });
 
     app.get("/classes", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await classCollection.find().toArray();
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
+      const result = await classCollection.find().skip(page * size).limit(size  ).toArray();
       res.send(result);
     });
+
+    app.get("/countedClass",verifyToken,verifyAdmin,async(req,res)=>{
+      const result=await classCollection.countDocuments();
+      res.send({result});
+    })
 
     app.get("/classes/:email", verifyToken, verifyTeacher, async (req, res) => {
       const email = req.params.email;
@@ -420,11 +427,21 @@ async function run() {
     });
 
     app.get("/enrolledClass/:email", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
       const email = req.params.email;
       const query = { studentEmail: email };
-      const result = await enrolledClassCollection.find(query).toArray();
+      const result = await enrolledClassCollection.find(query).skip(page * size).limit(size).toArray();
       res.send(result);
     });
+
+    app.get("/countedEnrolledClass/:email",async(req,res)=>{
+      const email=req.params.email;
+      const query={studentEmail:email}
+      const result=await enrolledClassCollection.countDocuments(query);
+      console.log(result);
+      res.send({result});
+    })
 
     app.get("/enrolledClassAssignment/:id", async (req, res) => {
       const id = req.params.id;
