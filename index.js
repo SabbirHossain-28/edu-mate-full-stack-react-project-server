@@ -288,13 +288,22 @@ async function run() {
       res.send({result});
     })
 
-    app.get("/classes/:email", verifyToken, verifyTeacher, async (req, res) => {
+    app.get("/classes/:email", verifyToken, async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
       const email = req.params.email;
       console.log(email);
       const query = { teacherEmail: email };
-      const result = await classCollection.find(query).toArray();
+      const result = await classCollection.find(query).skip(page * size).limit(size).toArray();
       res.send(result);
     });
+
+    app.get("/teacherCountedClass/:email",verifyToken,verifyTeacher,async(req,res)=>{
+      const email=req.params.email;
+      const query={teacherEmail:email};
+      const result=await classCollection.countDocuments(query);
+      res.send({result});
+    })
 
     app.get("/class/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
@@ -479,12 +488,21 @@ async function run() {
     });
 
     app.get("/assignments/:id", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
       const id = req.params.id;
       console.log(id);
       const query = { classId: id };
-      const result = await assignmentCollection.find(query).toArray();
+      const result = await assignmentCollection.find(query).skip(page * size).limit(size).toArray();
       res.send(result);
     });
+
+    app.get("/countedAssignments/:id",async(req,res)=>{
+      const id=req.params.id;
+      const query={classId:id};
+      const result=await assignmentCollection.countDocuments(query);
+      res.send({result});
+    })
 
     app.post("/submittedAssignment", async (req, res) => {
       const submittedAssignmentData = req.body;
