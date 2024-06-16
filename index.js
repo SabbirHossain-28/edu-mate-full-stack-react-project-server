@@ -8,7 +8,15 @@ const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY_SERVER);
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://edumate-fullstack-project.web.app",
+      "https://edumate-fullstack-project.firebaseapp.com",
+    ]
+  })
+);
 
 const verifyToken = (req, res, next) => {
   if (!req.headers.authorization) {
@@ -586,9 +594,9 @@ async function run() {
       }
     });
     // await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
