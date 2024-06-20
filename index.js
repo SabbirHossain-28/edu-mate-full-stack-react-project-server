@@ -495,7 +495,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/assignments/:id", async (req, res) => {
+    app.get("/assignments/:id",verifyToken, async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
       const id = req.params.id;
@@ -512,7 +512,7 @@ async function run() {
       res.send({result});
     })
 
-    app.post("/submittedAssignment", async (req, res) => {
+    app.post("/submittedAssignment",verifyToken, async (req, res) => {
       const submittedAssignmentData = req.body;
       const classId = submittedAssignmentData.classId;
       try {
@@ -559,7 +559,7 @@ async function run() {
       const result = await feedbackCollection.find().toArray();
       res.send(result);
     });
-    app.get("/feedbacks/:id", async (req, res) => {
+    app.get("/feedbacks/:id",verifyToken, async (req, res) => {
       const classId = req.params.id;
       const query = { classId: classId };
       const result = await feedbackCollection.find(query).toArray();
