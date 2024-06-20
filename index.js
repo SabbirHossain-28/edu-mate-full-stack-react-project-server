@@ -14,7 +14,7 @@ app.use(
       "http://localhost:5173",
       "https://edumate-fullstack-project.web.app",
       "https://edumate-fullstack-project.firebaseapp.com",
-    ]
+    ],
   })
 );
 
@@ -126,7 +126,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/countedUsers",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/countedUsers", verifyToken, verifyAdmin, async (req, res) => {
       const search = req.query.search;
       let query = {
         $or: [
@@ -208,7 +208,11 @@ async function run() {
     app.get("/applications", verifyToken, verifyAdmin, async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
-      const result = await applicationCollection.find().skip(page * size).limit(size).toArray();
+      const result = await applicationCollection
+        .find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
@@ -273,10 +277,15 @@ async function run() {
       }
     );
 
-    app.get("/countedApplications",verifyToken,verifyAdmin,async(req,res)=>{
-      const result=await applicationCollection.countDocuments();
-      res.send({result})
-    })
+    app.get(
+      "/countedApplications",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await applicationCollection.countDocuments();
+        res.send({ result });
+      }
+    );
 
     app.post("/classes", verifyToken, verifyTeacher, async (req, res) => {
       const classData = req.body;
@@ -287,14 +296,18 @@ async function run() {
     app.get("/classes", verifyToken, verifyAdmin, async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
-      const result = await classCollection.find().skip(page * size).limit(size  ).toArray();
+      const result = await classCollection
+        .find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
-    app.get("/countedClass",verifyToken,verifyAdmin,async(req,res)=>{
-      const result=await classCollection.countDocuments();
-      res.send({result});
-    })
+    app.get("/countedClass", async (req, res) => {
+      const result = await classCollection.countDocuments();
+      res.send({ result });
+    });
 
     app.get("/classes/:email", verifyToken, async (req, res) => {
       const size = parseInt(req.query.size);
@@ -302,16 +315,25 @@ async function run() {
       const email = req.params.email;
       console.log(email);
       const query = { teacherEmail: email };
-      const result = await classCollection.find(query).skip(page * size).limit(size).toArray();
+      const result = await classCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
-    app.get("/teacherCountedClass/:email",verifyToken,verifyTeacher,async(req,res)=>{
-      const email=req.params.email;
-      const query={teacherEmail:email};
-      const result=await classCollection.countDocuments(query);
-      res.send({result});
-    })
+    app.get(
+      "/teacherCountedClass/:email",
+      verifyToken,
+      verifyTeacher,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = { teacherEmail: email };
+        const result = await classCollection.countDocuments(query);
+        res.send({ result });
+      }
+    );
 
     app.get("/class/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
@@ -322,13 +344,21 @@ async function run() {
 
     app.get("/allclasses/accepted", async (req, res) => {
       try {
+        const size = parseInt(req.query.size);
+        const page = parseInt(req.query.page) - 1;
         const query = { status: "Accepted" };
-        const result = await classCollection.find(query).toArray();
+        const result = await classCollection.find(query).skip(page * size).limit(size).toArray();
         res.send(result);
       } catch (error) {
         console.error("Error fetching accepted classes:", error);
         res.status(500).send({ message: "Inter server error" });
       }
+    });
+
+    app.get("/allAcceptedClassCounted", async (req, res) => {
+      const query = { status: "Accepted" };
+      const result = await classCollection.countDocuments(query);
+      res.send({ result });
     });
 
     app.delete("/classes/:id", verifyToken, verifyTeacher, async (req, res) => {
@@ -341,7 +371,6 @@ async function run() {
     app.patch("/classes/:id", verifyToken, verifyTeacher, async (req, res) => {
       const id = req.params.id;
       const updateData = req.body;
-      console.log("helllllo", updateData);
       const filter = { _id: new ObjectId(id) };
       const updatedClassData = {
         $set: {
@@ -438,7 +467,7 @@ async function run() {
       }
     });
 
-    app.get("/enrolledClass",verifyToken, async (req, res) => {
+    app.get("/enrolledClass", verifyToken, async (req, res) => {
       const result = await enrolledClassCollection.find().toArray();
       res.send(result);
     });
@@ -448,17 +477,21 @@ async function run() {
       const page = parseInt(req.query.page) - 1;
       const email = req.params.email;
       const query = { studentEmail: email };
-      const result = await enrolledClassCollection.find(query).skip(page * size).limit(size).toArray();
+      const result = await enrolledClassCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
-    app.get("/countedEnrolledClass/:email",async(req,res)=>{
-      const email=req.params.email;
-      const query={studentEmail:email}
-      const result=await enrolledClassCollection.countDocuments(query);
+    app.get("/countedEnrolledClass/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { studentEmail: email };
+      const result = await enrolledClassCollection.countDocuments(query);
       console.log(result);
-      res.send({result});
-    })
+      res.send({ result });
+    });
 
     app.get("/enrolledClassAssignment/:id", async (req, res) => {
       const id = req.params.id;
@@ -495,24 +528,27 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/assignments/:id",verifyToken, async (req, res) => {
+    app.get("/assignments/:id", verifyToken, async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
       const id = req.params.id;
-      console.log(id);
       const query = { classId: id };
-      const result = await assignmentCollection.find(query).skip(page * size).limit(size).toArray();
+      const result = await assignmentCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
-    app.get("/countedAssignments/:id",async(req,res)=>{
-      const id=req.params.id;
-      const query={classId:id};
-      const result=await assignmentCollection.countDocuments(query);
-      res.send({result});
-    })
+    app.get("/countedAssignments/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { classId: id };
+      const result = await assignmentCollection.countDocuments(query);
+      res.send({ result });
+    });
 
-    app.post("/submittedAssignment",verifyToken, async (req, res) => {
+    app.post("/submittedAssignment", verifyToken, async (req, res) => {
       const submittedAssignmentData = req.body;
       const classId = submittedAssignmentData.classId;
       try {
@@ -559,7 +595,7 @@ async function run() {
       const result = await feedbackCollection.find().toArray();
       res.send(result);
     });
-    app.get("/feedbacks/:id",verifyToken, async (req, res) => {
+    app.get("/feedbacks/:id", verifyToken, async (req, res) => {
       const classId = req.params.id;
       const query = { classId: classId };
       const result = await feedbackCollection.find(query).toArray();
